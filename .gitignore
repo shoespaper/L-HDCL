@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Conda/Mamba environments
+/root/miniforge3/
+/home/*/miniconda3/
+/home/*/mambaforge/
+
+# Datasets - these are too large for Git
+datasets/
+CMU_Multimodal_Dataset.zip
+glove/
+pre_trained_models/
+src/bert/
+
+# IDE/Editor specific
+.ipynb_checkpoints/
+.vscode/
+
+# Pre-trained models in src/bert (optional, but good practice if large)
+# If pytorch_model.bin is very large, uncomment the line below
+# src/bert/pytorch_model.bin
