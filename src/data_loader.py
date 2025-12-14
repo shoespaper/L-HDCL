@@ -97,7 +97,8 @@ def get_loader(hp, config, shuffle=True):
             if isinstance(sample[1], torch.Tensor):
                 labels.append(sample[1])
             else:
-                labels.append(torch.from_numpy(sample[1]))
+                # labels.append(torch.from_numpy(sample[1]))
+                labels.append(torch.tensor(sample[1], dtype=torch.float32))
                 
             ids.append(sample[2]) 
        

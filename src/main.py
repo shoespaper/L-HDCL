@@ -29,7 +29,7 @@ def set_seed(seed):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         # 这一行经常导致 DataLoader 在 CPU 加载数据时报错
-        torch.set_default_tensor_type('torch.cuda.FloatTensor') 
+        # torch.set_default_tensor_type('torch.cuda.FloatTensor') 
 
 if __name__ == '__main__':
     args = get_args()

@@ -336,7 +336,7 @@ class Solver(object):
                     best_mae = test_loss
                     if self.hp.dataset in ["mosei_senti", "mosei"]:
                         eval_result= eval_mosei_senti(results, truths, True)
-                    elif self.hp.dataset == 'mosi':
+                    elif self.hp.dataset in ["mosi","sims"]:
                         eval_result = eval_mosi(results, truths, True)
                     elif self.hp.dataset == 'iemocap':
                         eval_result = eval_iemocap(results, truths)
@@ -357,7 +357,7 @@ class Solver(object):
         self.print_log(f'Best epoch: {best_epoch}')
         if self.hp.dataset in ["mosei_senti", "mosei"]:
             eval_mosei_senti(best_results, best_truths, True)
-        elif self.hp.dataset == 'mosi':
+        elif self.hp.dataset in ["mosi","sims"]:
             self.best_dict = eval_mosi(best_results, best_truths, True)
         elif self.hp.dataset == 'iemocap':
             eval_iemocap(results, truths)
