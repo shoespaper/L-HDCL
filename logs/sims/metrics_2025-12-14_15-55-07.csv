@@ -1,0 +1,1 @@
+Epoch,Train_Loss,Valid_Loss,Test_Loss,Test_MAE,Test_Corr,Test_Acc_2,Test_F1,Best_Valid_Loss

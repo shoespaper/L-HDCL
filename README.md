@@ -23,6 +23,14 @@ cd ~/autodl-tmp/MCL-MCF/MCL-MCF
 ```python
 python -m src.main
 ```
+# 训练 MOSI 数据集
+```python -m src.main --dataset mosi```
+
+# 训练 MOSEI 数据集  
+```python -m src.main --dataset mosei```
+# 训练 参数  
+```cd ~/autodl-tmp/MCL-MCF/MCL-MCF```
+```python auto_search.py```
 ### Thanks
 We are grateful for the open source baseline of MMIM. We built MCL-MCF on it. For configuration and dataset related open source, please refer to [MMIM](https://github.com/declare-lab/Multimodal-Infomax?tab=readme-ov-file).
 Please cite this paper if you find our work useful for your research:

@@ -250,8 +250,8 @@ class MOSEI:
             # first we align to words with averaging, collapse_function receives a list of functions
             # dataset.align(text_field, collapse_functions=[avg])
             # load pickle file for unaligned acoustic and visual source
-            pickle_filename = 'Multimodal-Infomax-main/datasets/MOSEI/mosei_senti_data_noalign.pkl'
-            csv_filename = 'Multimodal-Infomax-main/datasets/MOSEI/MOSEI-label.csv'
+            pickle_filename = DATA_PATH+'/mosei_senti_data_noalign.pkl'
+            csv_filename = DATA_PATH+'/MOSEI-label.csv'
 
             with open(pickle_filename, 'rb') as f:
                 d = pickle.load(f)
@@ -385,4 +385,128 @@ class MOSEI:
             return self.test, self.word2id, self.pretrained_emb
         else:
             print("Mode is not set properly (train/dev/test)")
+            exit()
+
+class SIMS:
+    def __init__(self, config):
+        # 1. 路径检查
+        if config.dataset_dir is None:
+            print("Dataset path is not specified!")
+            exit(0)
+        
+        DATA_PATH = str(config.dataset_dir)
+        # 假设你下载的文件名是 ch_sims.pkl 或者 MMSA 处理好的文件名
+        # 这里假设文件名是 'CH-SIMS_aligned.pkl' 或 similar，请根据实际情况修改
+        # 建议把 .pkl 文件重命名为 sims.pkl 放在 dataset_dir 下
+        CACHE_PATH = os.path.join(DATA_PATH, 'sims.pkl') 
+
+        # 2. 加载数据
+        # SIMS 数据通常比较小，我们可以直接加载，或者像 MOSI 一样做缓存逻辑
+        # 这里为了保持一致性，我们尝试加载处理好的缓存，如果没有则处理原始文件
+        try:
+            self.train = load_pickle(os.path.join(DATA_PATH, 'train_cache.pkl'))
+            self.dev = load_pickle(os.path.join(DATA_PATH, 'dev_cache.pkl'))
+            self.test = load_pickle(os.path.join(DATA_PATH, 'test_cache.pkl'))
+            print(f"Loaded Cached SIMS Data from {DATA_PATH}")
+        except:
+            print(f"Cache not found, loading raw SIMS pickle from {CACHE_PATH}...")
+            
+            # 加载 MMSA 格式的 pickle 文件
+            with open(CACHE_PATH, 'rb') as f:
+                data = pickle.load(f)
+            
+            # MMSA 格式通常是: data['train']['vision'], data['train']['raw_text']...
+            self.train = self.reform_data(data['train'])
+            self.dev = self.reform_data(data['valid']) # 注意 MMSA key 可能是 'valid'
+            self.test = self.reform_data(data['test'])
+
+            # 保存缓存，下次直接读取
+            to_pickle(self.train, os.path.join(DATA_PATH, 'train_cache.pkl'))
+            to_pickle(self.dev, os.path.join(DATA_PATH, 'dev_cache.pkl'))
+            to_pickle(self.test, os.path.join(DATA_PATH, 'test_cache.pkl'))
+            print("SIMS Data processed and cached.")
+
+        # 为了兼容接口，返回空的 word2id (因为我们用 BERT)
+        self.word2id = defaultdict(lambda: len(self.word2id))
+
+    def reform_data(self, dataset):
+        """
+        将 MMSA 字典格式转换为 L-HDCL 需要的 Tuple 格式
+        目标格式: ((words_idx, visual, acoustic, raw_text_list, v_len, a_len), label, id)
+        """
+        results = []
+        
+        # 【修改点 1】自动寻找正确的 Label Key
+        # MMSA 通常使用 'regression_labels'，但也可能用 'labels' 或 'label'
+        if 'regression_labels' in dataset:
+            all_labels = dataset['regression_labels']
+        elif 'labels' in dataset:
+            all_labels = dataset['labels']
+        elif 'label' in dataset:
+            all_labels = dataset['label']
+        else:
+            print("Error: 找不到标签数据 (Keys: regression_labels, labels, label 都不存在)")
+            print(f"Available keys: {dataset.keys()}")
+            exit()
+            
+        num_samples = len(all_labels)
+        
+        # 【修改点 2】自动寻找 ID Key (防止报错)
+        # 如果没有 id 键，就生成假的 id
+        all_ids = dataset.get('id', [f'sims_{i}' for i in range(num_samples)])
+
+        for i in range(num_samples):
+            # 1. 提取特征
+            visual = dataset['vision'][i]   # Shape: (Seq_Len, V_Dim)
+            acoustic = dataset['audio'][i]  # Shape: (Seq_Len, A_Dim)
+            label = all_labels[i]           # Shape: (1,) 或 Scalar
+            
+            segment_id = all_ids[i]
+
+            # 2. 文本处理 (raw_text)
+            # 增加鲁棒性：有些 key 叫 'text' 有些叫 'raw_text'
+            if 'raw_text' in dataset:
+                raw_text = dataset['raw_text'][i]
+            elif 'text' in dataset: # 有些版本叫 text
+                raw_text = dataset['text'][i]
+            else:
+                raw_text = "未知文本"
+
+            if isinstance(raw_text, str):
+                # 去掉空格 (有些数据集是 "我 爱 你")
+                raw_text = raw_text.replace(" ", "")
+                raw_text_list = list(raw_text) 
+            else:
+                # 如果已经是 list
+                raw_text_list = raw_text
+
+            # 3. 长度计算
+            v_len = get_length(visual[np.newaxis, ...])[0]
+            a_len = get_length(acoustic[np.newaxis, ...])[0]
+            
+            if v_len == 0: v_len = visual.shape[0]
+            if a_len == 0: a_len = acoustic.shape[0]
+
+            # 4. 占位符 words
+            words_idx = [0] * len(raw_text_list)
+
+            # 5. 组装
+            entry = (
+                (words_idx, visual, acoustic, raw_text_list, v_len, a_len),
+                label,
+                segment_id
+            )
+            results.append(entry)
+            
+        return results
+
+    def get_data(self, mode):
+        if mode == "train":
+            return self.train, self.word2id, None
+        elif mode == "valid":
+            return self.dev, self.word2id, None
+        elif mode == "test":
+            return self.test, self.word2id, None
+        else:
+            print("Mode is not set properly (train/valid/test)")
             exit()

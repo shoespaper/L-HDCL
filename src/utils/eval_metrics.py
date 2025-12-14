@@ -62,14 +62,14 @@ def eval_mosei_senti(results, truths, exclude_zero=False):
 
     print("MAE: ", mae)
     print("Correlation Coefficient: ", corr)
-    print("mult_acc_7: ", mult_a7)
-    print("mult_acc_5: ", mult_a5)
+    #print("mult_acc_7: ", mult_a7)
+    #print("mult_acc_5: ", mult_a5)
     print("F1 score all/non0: {}/{} over {}/{}".format(np.round(f_score, 4),
           np.round(f_score_non0, 4), binary_truth_has0.shape[0], binary_truth_non0.shape[0]))
-    print("Accuracy all/non0: {}/{}".format(np.round(acc_2, 4), np.round(acc_2_non0, 4)))
+    print("Accuracy 2/non0: {}/{}".format(np.round(acc_2, 4), np.round(acc_2_non0, 4)))
 
     print("-" * 50)
-    return {'mae': mae, 'corr': corr, 'mult': mult_a7, 'f1': f_score, 'acc2': acc_2}
+    return {'mae': mae, 'corr': corr, 'mult': mult_a7, 'f1': f_score,'f1_non0':f_score_non0, 'acc2': acc_2,'acc2_non0': acc_2_non0}
 
 
 def eval_mosi(results, truths, exclude_zero=False):

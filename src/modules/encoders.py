@@ -12,24 +12,89 @@ def add_noise(x, intens=1e-7):
     return x + torch.rand(x.size()) * intens
 
 
+# 特征解耦层
+class DecouplingLayer(nn.Module):
+    """
+    特征解耦层：将输入特征分解为 共享(Shared) 和 私有(Private)
+    """
+    def __init__(self, in_dim, common_dim, dropout=0.1):
+        super(DecouplingLayer, self).__init__()
+        
+        self.shared_net = nn.Sequential(
+            nn.Linear(in_dim, common_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(common_dim, common_dim)
+        )
+        
+        self.private_net = nn.Sequential(
+            nn.Linear(in_dim, common_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(common_dim, common_dim)
+        )
+
+    def forward(self, x):
+        h_shared = self.shared_net(x)
+        h_private = self.private_net(x)
+        return h_shared, h_private
+
+
+# 正交/差异性损失
+class OrthogonalLoss(nn.Module):
+    """
+    正交损失/差异性损失：强制共享特征和私有特征互不相关,即最小化它们之间的相关性,帮助特征解耦
+    """
+    def forward(self, h_shared, h_private):
+        # 1. 去中心化 (Batch Norm style)
+        h_shared = h_shared - h_shared.mean(dim=0)
+        h_private = h_private - h_private.mean(dim=0)
+        
+        # 2. 计算相关矩阵 (Correlation Matrix)
+        # h_shared: [B, D], h_private: [B, D] -> [D, D]
+        correlation_matrix = torch.matmul(h_shared.T, h_private)
+        
+        # 3. Frobenius 范数平方 (让所有元素趋近于0)
+        # 除以 Batch Size 进行归一化，防止 Batch 越大 Loss 越大
+        cost = torch.norm(correlation_matrix, p='fro') ** 2
+        return cost / h_shared.size(0)
+    
+
+
+
+
 class LanguageEmbeddingLayer(nn.Module):
     """Embed input text with "glove" or "Bert"
     """
-
     def __init__(self, hp):
         super(LanguageEmbeddingLayer, self).__init__()
-        bertconfig = BertConfig.from_pretrained(
-            pretrained_model_name_or_path=MODEL_PATH, output_hidden_states=True)
-        self.bertmodel = BertModel.from_pretrained(
-             pretrained_model_name_or_path=MODEL_PATH, config=bertconfig)
+        # 【修改点】不再使用全局 MODEL_PATH，而是使用 hp.bert_name
+        # hp.bert_name 应该是 'bert-base-chinese' 或 'hfl/chinese-macbert-base'
+        print(f"Loaded Pretrained Model: {hp.bert_name}")
+        
+        self.bertmodel = BertModel.from_pretrained(hp.bert_name)
 
     def forward(self, sentences, bert_sent, bert_sent_type, bert_sent_mask):
         bert_output = self.bertmodel(input_ids=bert_sent,
                                      attention_mask=bert_sent_mask,
                                      token_type_ids=bert_sent_type)
-        # print(self.bertmodel,"zheshi bert，Odell")
-        bert_output = bert_output[0]
-        return bert_output   # return head (sequence representation)
+        # return head (sequence representation)
+        return bert_output.last_hidden_state
+
+    # def __init__(self, hp):
+    #     super(LanguageEmbeddingLayer, self).__init__()
+    #     bertconfig = BertConfig.from_pretrained(
+    #         pretrained_model_name_or_path=MODEL_PATH, output_hidden_states=True)
+    #     self.bertmodel = BertModel.from_pretrained(
+    #          pretrained_model_name_or_path=MODEL_PATH, config=bertconfig)
+
+    # def forward(self, sentences, bert_sent, bert_sent_type, bert_sent_mask):
+    #     bert_output = self.bertmodel(input_ids=bert_sent,
+    #                                  attention_mask=bert_sent_mask,
+    #                                  token_type_ids=bert_sent_type)# type: ignore
+    #     # print(self.bertmodel,"zheshi bert，Odell")
+    #     bert_output = bert_output[0]
+    #     return bert_output   # return head (sequence representation)
 
 class SubNet(nn.Module):
     '''
@@ -66,6 +131,8 @@ class SubNet(nn.Module):
         return y_2, y_3
 
 
+
+# 【保留但可能不用的模块】 (CLUB, MMILB, CPC - 可以留着做对比实验)
 class CLUB(nn.Module):
     """
         Compute the Contrastive Log-ratio Upper Bound (CLUB) given a pair of inputs.
@@ -237,19 +304,28 @@ class MMILB(nn.Module):
 class Clip(nn.Module):
     def __init__(self, x_size, y_size):
         super().__init__()
-
+        
+        # 投影层保持不变
         self.x_learn_weight = nn.Linear(x_size, 128)
         self.y_learn_weight = nn.Linear(y_size, 128)
 
-    def forward(self, x, y):  # 32,768  32,64
-        x = self.x_learn_weight(x)  # 32,128
-        logit_scale = torch.ones([]) * np.log(1 / 0.07)
-        x = x / x.norm(dim=1, keepdim=True)
-        y = y / y.norm(dim=1, keepdim=True)
-        y = self.y_learn_weight(y)
-        logits = logit_scale*torch.mm(x, y.T)
-        labels = torch.arange(x.shape[0])
-        # logits[logits > 88] = 88
+        # 初始值设为 log(1/0.07)，并且设为 nn.Parameter 以便它能自动移动到 GPU
+        self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
+
+    def forward(self, x, y):  
+        x = self.x_learn_weight(x) 
+        y = self.y_learn_weight(y) # 先投影，再归一化
+
+        # 归一化
+        x = F.normalize(x, dim=1)
+        y = F.normalize(y, dim=1)
+        
+        # 限制最大值防止梯度爆炸 (可选，通常设为 100 或 4.6)
+        logit_scale = self.logit_scale.exp().clamp(max=100)
+        
+        logits = logit_scale * torch.mm(x, y.T)
+        labels = torch.arange(x.shape[0]).to(x.device) # 确保 label 在同一设备
+        
         loss_i = F.cross_entropy(logits, labels)
         loss_t = F.cross_entropy(logits.T, labels)
 
@@ -349,6 +425,7 @@ class RNNEncoder(nn.Module):
 
 
 # @@@@@@@@@@@@@@@@
+# 用不到的模块，待删除
 class Residual(nn.Module):  # @save
     def __init__(self, input_channels, num_channels,
                  use_1x1conv=False, strides=1):
@@ -373,7 +450,7 @@ class Residual(nn.Module):  # @save
         Y += X
         return F.relu(Y)
 
-
+# 用不到的模块，待删除
 def resnet_block(input_channels, num_channels, num_residuals,
                  first_block=False):
     blk = []
@@ -385,7 +462,7 @@ def resnet_block(input_channels, num_channels, num_residuals,
             blk.append(Residual(num_channels, num_channels))
     return blk
 
-
+# 用不到的模块，待删除
 def get_resNet():
     b1 = nn.Sequential(nn.Conv1d(768, 512, kernel_size=1, stride=1),
                        nn.ReLU())
@@ -401,7 +478,7 @@ def get_resNet():
     net = nn.Sequential(b1, )
     return net
 
-
+# 用不到的模块，待删除
 def get_resNet2():
     b1 = nn.Sequential(nn.Conv1d(64, 512, kernel_size=1, stride=1),
                        nn.ReLU())
@@ -417,7 +494,7 @@ def get_resNet2():
     net = nn.Sequential(b1, )
     return net
 
-
+# 用不到的模块，待删除
 def get_resNet3():
     b1 = nn.Sequential(nn.Conv1d(64, 512, kernel_size=1, stride=1),
                        nn.ReLU())
@@ -433,7 +510,7 @@ def get_resNet3():
     net = nn.Sequential(b1, )
     return net
 
-
+# 用不到的模块，待删除
 def get_resNet4():
     b1 = nn.Sequential(nn.Conv1d(896, 512, kernel_size=1, stride=1),
                        nn.ReLU())

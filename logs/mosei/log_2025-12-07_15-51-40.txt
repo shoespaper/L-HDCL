@@ -1,0 +1,78 @@
+Hyperparameters: Namespace(add_va=True, alpha=0.1, attn_dropout=0.1, attn_dropout_a=0.0, attn_dropout_v=0.0, attn_mask=False, aux_weight=0.06, batch_size=128, beta=0.1, bidirectional=False, clip=5.0, common_dim=128, contrast=True, cpc_activation='Tanh', cpc_layers=1, criterion='MSELoss', d_ah=64, d_ain=74, d_aout=64, d_prjh=128, d_tin=768, d_tout=768, d_vh=64, d_vin=35, d_vout=64, data='mosei', data_path='datasets', dataset='mosei', dim_feedforward=256, dropout_a=0.1, dropout_prj=0.1, dropout_v=0.1, embed_dim=64, embed_dropout=0.25, f='', layers=1, log_interval=100, lr_bert=5e-05, lr_main=8e-05, lr_mmilb=0.0001, mmilb_last_activation='Tanh', mmilb_mid_activation='ReLU', multiseed=False, n_class=1, n_layer=1, n_test=4659, n_train=16326, n_valid=1871, nce2=0.1, nce3=0.1, num_epochs=100, num_heads=4, optim='Adam', out_dropout=0.0, patience=10, pretrain_emb=768, relu_dropout=0.1, res_dropout=0.1, seed=1111, update_batch=1, weight_decay_bert=0.0001, weight_decay_club=0.0001, weight_decay_main=0.0001, when=20, word2id=None)
+Epoch  1 | Batch 100/127 | Time 294.92ms | Loss 1.9319 | Task 0.655 Diff 8.680 L1 14.703 L2 4.134 L3 13.421
+--------------------------------------------------
+Epoch  1 | Time 44.8782 sec | Valid Loss 0.5864 | Test Loss 0.5901
+--------------------------------------------------
+Saved model at pre_trained_models/mosei_best_model+时间戳.pt! 2025-12-07 15:52:25
+*** New Best Epoch: 1 (MAE: 0.5901) ***
+{'mae': 0.59009546, 'corr': 0.7423384382480261, 'mult': 0.49645846748229233, 'f1': 0.8296161186325832, 'f1_non0': 0.8147623339104404, 'acc2': 0.8373041425198541, 'acc2_non0': 0.8247110621904238}
+
+Epoch  2 | Batch 100/127 | Time 292.19ms | Loss 1.4739 | Task 0.480 Diff 3.413 L1 14.593 L2 2.663 L3 10.725
+--------------------------------------------------
+Epoch  2 | Time 45.1417 sec | Valid Loss 0.5611 | Test Loss 0.5668
+--------------------------------------------------
+Saved model at pre_trained_models/mosei_best_model+时间戳.pt! 2025-12-07 15:53:11
+*** New Best Epoch: 2 (MAE: 0.5668) ***
+{'mae': 0.5667869, 'corr': 0.7625186057877361, 'mult': 0.5185662159261644, 'f1': 0.8401495617931805, 'f1_non0': 0.8345213193520843, 'acc2': 0.8443872075552694, 'acc2_non0': 0.840946615299945}
+
+Epoch  3 | Batch 100/127 | Time 285.02ms | Loss 1.2728 | Task 0.494 Diff 2.173 L1 14.493 L2 1.730 L3 8.010
+--------------------------------------------------
+Epoch  3 | Time 43.7425 sec | Valid Loss 0.5652 | Test Loss 0.5798
+--------------------------------------------------
+Epoch  4 | Batch 100/127 | Time 292.80ms | Loss 1.1262 | Task 0.388 Diff 2.048 L1 14.555 L2 1.368 L3 6.202
+--------------------------------------------------
+Epoch  4 | Time 44.3341 sec | Valid Loss 0.5395 | Test Loss 0.5545
+--------------------------------------------------
+Saved model at pre_trained_models/mosei_best_model+时间戳.pt! 2025-12-07 15:54:39
+*** New Best Epoch: 4 (MAE: 0.5545) ***
+{'mae': 0.55449736, 'corr': 0.7493899876483763, 'mult': 0.5280103026400516, 'f1': 0.8130037784174866, 'f1_non0': 0.8441654777312275, 'acc2': 0.8094011590470058, 'acc2_non0': 0.8458998348926803}
+
+Epoch  5 | Batch 100/127 | Time 297.03ms | Loss 1.0283 | Task 0.410 Diff 1.533 L1 14.536 L2 1.060 L3 5.011
+--------------------------------------------------
+Epoch  5 | Time 45.4922 sec | Valid Loss 0.5321 | Test Loss 0.5392
+--------------------------------------------------
+Saved model at pre_trained_models/mosei_best_model+时间戳.pt! 2025-12-07 15:55:26
+*** New Best Epoch: 5 (MAE: 0.5392) ***
+{'mae': 0.5391821, 'corr': 0.7659851027444731, 'mult': 0.54045932603563, 'f1': 0.8049214063142794, 'f1_non0': 0.8498951653972715, 'acc2': 0.7971667739858339, 'acc2_non0': 0.848651623555311}
+
+Epoch  6 | Batch 100/127 | Time 285.50ms | Loss 0.9578 | Task 0.337 Diff 1.268 L1 14.466 L2 0.907 L3 4.267
+--------------------------------------------------
+Epoch  6 | Time 43.8507 sec | Valid Loss 0.5559 | Test Loss 0.5661
+--------------------------------------------------
+Epoch  7 | Batch 100/127 | Time 283.41ms | Loss 0.8944 | Task 0.306 Diff 1.035 L1 14.434 L2 0.773 L3 3.310
+--------------------------------------------------
+Epoch  7 | Time 43.8801 sec | Valid Loss 0.5729 | Test Loss 0.5748
+--------------------------------------------------
+Epoch  8 | Batch 100/127 | Time 285.50ms | Loss 0.8477 | Task 0.266 Diff 0.875 L1 14.328 L2 0.654 L3 3.053
+--------------------------------------------------
+Epoch  8 | Time 43.6411 sec | Valid Loss 0.5628 | Test Loss 0.5845
+--------------------------------------------------
+Epoch  9 | Batch 100/127 | Time 285.84ms | Loss 0.8195 | Task 0.284 Diff 0.768 L1 14.361 L2 0.612 L3 2.663
+--------------------------------------------------
+Epoch  9 | Time 43.9894 sec | Valid Loss 0.5576 | Test Loss 0.5731
+--------------------------------------------------
+Epoch 10 | Batch 100/127 | Time 281.82ms | Loss 0.7885 | Task 0.240 Diff 0.776 L1 14.402 L2 0.585 L3 2.554
+--------------------------------------------------
+Epoch 10 | Time 43.3839 sec | Valid Loss 0.5645 | Test Loss 0.5745
+--------------------------------------------------
+Epoch 11 | Batch 100/127 | Time 298.10ms | Loss 0.7662 | Task 0.254 Diff 0.591 L1 14.280 L2 0.462 L3 2.201
+--------------------------------------------------
+Epoch 11 | Time 45.4090 sec | Valid Loss 0.5364 | Test Loss 0.5526
+--------------------------------------------------
+Epoch 12 | Batch 100/127 | Time 287.13ms | Loss 0.7384 | Task 0.244 Diff 0.620 L1 14.381 L2 0.473 L3 2.147
+--------------------------------------------------
+Epoch 12 | Time 44.3894 sec | Valid Loss 0.5706 | Test Loss 0.5890
+--------------------------------------------------
+Epoch 13 | Batch 100/127 | Time 277.14ms | Loss 0.7259 | Task 0.229 Diff 0.543 L1 14.218 L2 0.407 L3 1.882
+--------------------------------------------------
+Epoch 13 | Time 42.9903 sec | Valid Loss 0.5638 | Test Loss 0.5834
+--------------------------------------------------
+Epoch 14 | Batch 100/127 | Time 290.21ms | Loss 0.7073 | Task 0.232 Diff 0.467 L1 14.238 L2 0.432 L3 1.827
+--------------------------------------------------
+Epoch 14 | Time 44.0453 sec | Valid Loss 0.5481 | Test Loss 0.5463
+--------------------------------------------------
+Epoch 15 | Batch 100/127 | Time 297.23ms | Loss 0.6970 | Task 0.206 Diff 0.400 L1 14.340 L2 0.372 L3 1.626
+--------------------------------------------------
+Epoch 15 | Time 45.0381 sec | Valid Loss 0.5656 | Test Loss 0.5702
+--------------------------------------------------
+Best epoch: 5

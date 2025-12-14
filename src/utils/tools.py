@@ -1,7 +1,7 @@
 import torch
 import os
 import io
-
+import time
 
 def save_load_name(args, name=''):
     if args.aligned:
@@ -12,17 +12,19 @@ def save_load_name(args, name=''):
     return name + '_' + args.model
 
 
-def save_model(args, model, name=''):
-    # name = save_load_name(args, name)
-    name = 'best_model'
-    if not os.path.exists('pre_trained_models'):
-        os.mkdir('pre_trained_models')
-    torch.save(model.state_dict(), f'pre_trained_models/{name}.pt')
+def save_model(args, model, name='', tag=""):
+    dir = os.path.join('pre_trained_models', name)
+    os.makedirs(dir, exist_ok=True)
+    
+    # 将小数点替换为下划线或其他字符
+    tag_str = str(tag).replace('.', '_')+'_'+time.strftime("%Y%m%d%H%M", time.localtime(time.time()))
+    file_path = os.path.join(dir, f'{tag_str}.pt') # 使用 os.path.join 拼接完整文件路径
+    torch.save(model.state_dict(), file_path)
 
 
 def load_model(args, name=''):
     # name = save_load_name(args, name)
-    name = 'best_model'
+    #name = 'best_model'
     with open(f'pre_trained_models/{name}.pt', 'rb') as f:
         buffer = io.BytesIO(f.read())
     model = torch.load(buffer)

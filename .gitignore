@@ -15,7 +15,7 @@ CMU_Multimodal_Dataset.zip
 glove/
 pre_trained_models/
 src/bert/
-
+src/pretrain_models
 # IDE/Editor specific
 .ipynb_checkpoints/
 .vscode/

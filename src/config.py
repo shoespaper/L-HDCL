@@ -8,25 +8,23 @@ import pprint
 from torch import optim
 import torch.nn as nn
 
-
-
 # username=lvzhao_a
 username = Path.home().name
 # project_dir==/media/data2/zhukang/first_pro/Multimodal-Infomax-main
 project_dir = Path(__file__).resolve().parent.parent
 # path to a pretrained word embedding file
-word_emb_path = project_dir.joinpath('glove/glove.840B.300d.txt') #'/home/henry/glove/glove.840B.300d.txt'
+# 请确保这个路径是你本地实际存在的 GloVe 路径
+word_emb_path = project_dir.joinpath('glove/glove.840B.300d.txt') 
 assert (word_emb_path is not None)
 
-# sdk_dir==/media/data2/zhukang/first_pro/Multimodal-Infomax-main/CMU-MultimodalSDK
+# sdk_dir
 sdk_dir = project_dir.joinpath('CMU-MultimodalSDK')
 print(sdk_dir)
-# data_dir==/media/data2/zhukang/first_pro/Multimodal-Infomax-main/datasets
+# data_dir
 data_dir = project_dir.joinpath('datasets')
-#data_dict = {'mosi': data_dir.joinpath('MOSI'), 'mosei': data_dir.joinpath(
-#    'MOSEI'), 'ur_funny': data_dir.joinpath('UR_FUNNY')}
+
 data_dict = {'mosi': data_dir.joinpath('MOSI'), 'mosei': data_dir.joinpath(
-    'MOSEI')}
+    'MOSEI'), 'sims': data_dir.joinpath('SIMS')}
 optimizer_dict = {'RMSprop': optim.RMSprop, 'Adam': optim.Adam}
 activation_dict = {'elu': nn.ELU, "hardshrink": nn.Hardshrink, "hardtanh": nn.Hardtanh,
                    "leakyrelu": nn.LeakyReLU, "prelu": nn.PReLU, "relu": nn.ReLU, "rrelu": nn.RReLU,
@@ -34,7 +32,7 @@ activation_dict = {'elu': nn.ELU, "hardshrink": nn.Hardshrink, "hardtanh": nn.Ha
 
 output_dim_dict = {
     'mosi': 1,
-    'mosei_senti': 1,
+    'mosei_senti': 1
 }
 
 criterion_dict = {
@@ -49,7 +47,7 @@ def get_args():
     parser.add_argument('-f', default='', type=str)
 
     # Tasks
-    parser.add_argument('--dataset', type=str, default='mosi', choices=['mosi', 'mosei'],
+    parser.add_argument('--dataset', type=str, default='mosi', choices=['mosi', 'mosei','sims'],
                         help='dataset to use (default: mosei)')
     parser.add_argument('--data_path', type=str, default='datasets',
                         help='path for storing the dataset')
@@ -63,21 +61,25 @@ def get_args():
                         help='dropout of projection layer')
 
     # Architecture
-    # action=‘store_true’，
     parser.add_argument('--multiseed', action='store_true',
                         help='training using multiple seed')
     parser.add_argument('--contrast', default=True,
                         help='using contrast learning')
     parser.add_argument('--add_va', default=True,
                         help='if add va MMILB module')
+    
+    # LSTM Layers
     parser.add_argument('--n_layer', type=int, default=1,
                         help='number of layers in LSTM encoders (default: 1)')
     parser.add_argument('--cpc_layers', type=int, default=1,
                         help='number of layers in CPC NCE estimator (default: 1)')
+    
+    # Dimensions
     parser.add_argument('--d_vh', type=int, default=64,
                         help='hidden size in visual rnn')
     parser.add_argument('--d_ah', type=int, default=64,
                         help='hidden size in acoustic rnn')
+    # 注意：main.py 中已经有逻辑根据 bidirectional 覆盖 d_vout 和 d_aout，但这里保留默认值
     parser.add_argument('--d_vout', type=int, default=64,
                         help='output size in visual rnn')
     parser.add_argument('--d_aout', type=int, default=64,
@@ -89,6 +91,33 @@ def get_args():
     parser.add_argument('--pretrain_emb', type=int, default=768,
                         help='dimension of pretrained model output')
 
+    # =================================================================
+    # 【新增参数】 L-HDCL 新模型专用参数
+    # =================================================================
+    
+    #这个是辅助损失权重
+    parser.add_argument('--aux_weight', type=float, default=0.01,
+                    help='weight for auxiliary contrastive losses (default: 0.01)')
+    
+
+    parser.add_argument('--common_dim', type=int, default=128,
+                        help='Common dimension for feature decoupling and contrastive learning (default: 128)')
+    
+    # Transformer (Level-3 Fusion) Settings
+    parser.add_argument('--num_heads', type=int, default=4,
+                        help='number of heads for the transformer network (default: 4)')
+    parser.add_argument('--layers', type=int, default=1,
+                        help='number of layers in the transformer network (default: 1 for lightweight)')
+    parser.add_argument('--dim_feedforward', type=int, default=256,
+                        help='dimension of feedforward network in transformer (default: 256)')
+    parser.add_argument('--attn_mask', default=False,
+                        help='use attention mask for Transformer (default: False)')
+                        
+    # Pretrained Language Model Settings
+    parser.add_argument('--bert_name', type=str, default='bert-base-chinese', 
+                        help='Pretrained language model name')
+    # =================================================================
+
     # Activations
     parser.add_argument('--mmilb_mid_activation', type=str, default='ReLU',
                         help='Activation layer type in the middle of all MMILB modules')
@@ -98,24 +127,24 @@ def get_args():
                         help='Activation layer type in all CPC modules')
 
     # Training Setting
-    parser.add_argument('--batch_size', type=int, default=128, metavar='N',  
+    parser.add_argument('--batch_size', type=int, default=32, metavar='N',  
                         help='batch size (default: 32)')
     parser.add_argument('--clip', type=float, default=1.0,
                         help='gradient clip value (default: 0.8)')
+    
+    # Learning Rates (Transformers usually need smaller LR, 1e-4 is safe)
     parser.add_argument('--lr_main', type=float, default=1e-4,
-                        help='initial learning rate for main model parameters (default: 1e-3)')
+                        help='initial learning rate for main model parameters (default: 1e-4)')
     parser.add_argument('--lr_bert', type=float, default=5e-5,
                         help='initial learning rate for bert parameters (default: 5e-5)')
     parser.add_argument('--lr_mmilb', type=float, default=1e-4,
-                        help='initial learning rate for mmilb parameters (default: 1e-3)')
-    parser.add_argument('--alpha', type=float, default=0.05,
-                        help='weight for CPC NCE estimation item (default: 0.1)')
-    parser.add_argument('--beta', type=float, default=0.05,
-                        help='weight for lld item (default: 0.1)')
-    parser.add_argument('--nce2', type=float, default=0.05,
-                        help='weight for CPC NCE estimation item (default: 0.1)')
-    parser.add_argument('--nce3', type=float, default=0.05,
-                        help='weight for lld item (default: 0.1)')
+                        help='initial learning rate for mmilb parameters (default: 1e-4)')
+    
+    # Weights (这些在 solver.py 中被动态权重取代了，保留它们是为了兼容性)
+    parser.add_argument('--alpha', type=float, default=0.1, help='deprecated')
+    parser.add_argument('--beta', type=float, default=0.1, help='deprecated')
+    parser.add_argument('--nce2', type=float, default=0.1, help='deprecated')
+    parser.add_argument('--nce3', type=float, default=0.1, help='deprecated')
 
     parser.add_argument('--weight_decay_main', type=float, default=1e-4,
                         help='L2 penalty factor of the main Adam optimizer')
@@ -126,8 +155,8 @@ def get_args():
 
     parser.add_argument('--optim', type=str, default='Adam',
                         help='optimizer to use (default: Adam)')
-    parser.add_argument('--num_epochs', type=int, default=200,
-                        help='number of epochs (default: 40)')
+    parser.add_argument('--num_epochs', type=int, default=100,
+                        help='number of epochs (default: 100)')
     parser.add_argument('--when', type=int, default=20,
                         help='when to decay learning rate (default: 20)')
     parser.add_argument('--patience', type=int, default=10,
@@ -157,18 +186,8 @@ def get_args():
     parser.add_argument('--out_dropout', type=float, default=0.0,
                         help='output layer dropout')
 
-    parser.add_argument('--num_heads', type=int, default=4,
-                        help='number of heads for the transformer network (default: 5)')
-    parser.add_argument('--layers', type=int, default=3,
-                        help='number of layers in the network (default: 5)')
     parser.add_argument('--embed_dim', type=int, default=64,
                         help='number of layers in the network (default: 5)')
-    # self.embed_dim = hp.embed_dim
-    # self.num_heads = hp.num_heads
-    # self.layers = hp.layers
-    parser.add_argument('--attn_mask', default=True,
-                        help='use attention mask for Transformer (default: true)')
-    # self.attn_mask = hp.attn_mask
 
     args = parser.parse_args()
     return args
@@ -194,7 +213,6 @@ class Config(object):
         self.word_emb_path = word_emb_path
 
         # Data Split ex) 'train', 'valid', 'test'
-        # data_dir==/media/data2/zhukang/first_pro/Multimodal-Infomax-main/datasets/MOSI
         self.data_dir = self.dataset_dir
 
     def __str__(self):
